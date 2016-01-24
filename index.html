@@ -15,6 +15,7 @@ body {overflow:hidden;}
 </style>
 <script type="text/javascript">
 var AIR = {
+
     $: function (id)
     {
         return typeof id === "string" ? document.getElementById(id) : id;
@@ -71,6 +72,7 @@ var AIR = {
             obj.style.top = iCurT + iSpeedT + "px"; 
         }
     }
+    
 }
 function Draw (obj, num)
 {
@@ -83,6 +85,8 @@ function Draw (obj, num)
     this.timer = true;
     this.h = 0;
     this.uh = 0;
+    this.toStop = 0;
+    this.run = false;
     this.initialize();     
 }
 Draw.prototype = {
@@ -133,23 +137,17 @@ Draw.prototype = {
         document.onkeyup = function ( ev )
         {
             var ev = ev || window.event;
-            if(ev.keyCode == 13 || ev.keyCode == 32){
-                if(_this.btn && _this.timer){
-                    if(_this.obj[_this.obj.length-1].btn){
-                        _this.Play ();
-                        _this.btn = !_this.btn;
-                        _this.timer = !_this.timer; 
-                    }                     
-                }else{
-                    if(_this.obj[_this.obj.length-1].btn){
-                        _this.Stop ();
-                        _this.btn = !_this.btn;
-                        _this.timer = !_this.timer; 
-                    }
-                }
+            if(ev.keyCode == 32 && !_this.run){
+                 _this.Play ();
+                 _this.run = true;
+                 _this.btn = !_this.btn;
+                 _this.timer = !_this.timer; 
+            } else if(ev.keyCode == 13 && _this.run){
+                _this.Stop ();   
+                _this.btn = !_this.btn;
+                _this.timer = !_this.timer; 
+            } else {
                 return false;
-            }else{
-                return false; 
             }
         }
     },
@@ -181,30 +179,33 @@ Draw.prototype = {
             } 
         } 
     },
+    LuckDraw: function(){
+        var r = this.data[Math.floor(Math.random() * this.num) + 1];
+        this.show = r; //mark r as the lucky number 
+        this.Del (r); //remove the lucky number for next draw
+        r = r.toString().split("");
+        var c = this.obj.length - r.length; //add 0 in front of this array
+        if(r.length < this.obj.length){
+            for(var i=0; i<c; i++){
+                r.unshift(0) 
+            } 
+        }
+        this.result = r;   //lucky number for this time
+    },
     Stop: function ()
     {
-        if(!this.timer && !this.btn){
-            var n = this.num + 1; //Total possible number
-            var r = this.data[Math.floor(Math.random() * (0-n) + n)];
-            this.show = r; //mark r as the lucky number 
-            this.Del (r); //remove the lucky number for next draw
-            r = r.toString().split("");
-            var c = this.obj.length - r.length; //add 0 in front of this array
-            if(r.length < this.obj.length){
-                for(var i=0; i<c; i++){
-                    r.unshift(0) 
-                } 
-            }
-            this.result = r;   //lucky number for this time
-            //document.title = r+" : "+this.data;    
-            var t = 0;
-            for(var i=0; i<this.obj.length; i++){ //traverse all boxes
-                this.obj[i].btn = false;
-                this.obj[i].index = i;
-                this.obj[i].num = this.result[this.obj[i].index];
-                this.stopTimer (this.obj[i],t); 
-                t += 1500;
-            }
+        var i = this.toStop;
+        if(i == 0){
+            this.LuckDraw();
+        }
+        this.obj[i].btn = false;
+        this.obj[i].index = i;
+        this.obj[i].num = this.result[this.obj[i].index];
+        this.stopTimer (this.obj[i],0);
+        this.toStop += 1;
+        if(i == this.obj.length){
+            this.run = false;
+            this.toStop = 0;
         }
     },
     stopTimer: function (obj,t)
@@ -232,7 +233,7 @@ Draw.prototype = {
                         AIR.startMove(obj.ul,{left:0,top:obj.vh},function(){
                             obj.btn = true; 
                             var set = true;
-                            for(var i=0; i<_this.obj.length; i++){ //check whether all box is stoped
+                            for(var i=0; i<_this.obj.length; i++){ //check whether all box is finished
                                 if(!_this.obj[i].btn){
                                     set = false;     
                                 }
