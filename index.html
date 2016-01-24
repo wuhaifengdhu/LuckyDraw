@@ -1,0 +1,307 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>抽奖系统</title>
+<style type="text/css">
+* {margin:0; padding:0;}
+ul,li {list-style-type:none;}
+body {overflow:hidden;}
+#back {width:100%; height:100%; background:#f5f5f5; position:absolute; z-index:1;}
+#box {width:360px; height:100px; position:absolute; z-index:3; top:50%; left:50%; margin-top:-50px; margin-left:-180px; text-align:center;}
+#box1,#box2,#box3 {width:100px; height:100px; line-height:100px; float:left; background:#321c24; border:10px #321c24 solid; border-radius:50%; position:relative; overflow:hidden;}
+#box1 ul,#box2 ul,#box3 ul {color:#fff; font-size:68px; font-family:"Arial Black"; text-align:center; width:100px; height:100px; line-height:100px; position:absolute; top:0; left:0;}
+#box1 ul li,#box2 ul li,#box3 ul li {width:100px; height:100px; background:red; border-radius:50%;}
+</style>
+<script type="text/javascript">
+var AIR = {
+    $: function (id)
+    {
+        return typeof id === "string" ? document.getElementById(id) : id;
+    }, 
+    $$: function (elem, oParent)
+    {
+        return (oParent || document).getElementsByTagName(elem);
+    },
+    addEvent: function (oElement, sEvent, fnHandler) 
+    {
+        oElement.addEventListener ? oElement.addEventListener(sEvent, fnHandler, false) : oElement.attachEvent("on" + sEvent, fnHandler) 
+    },
+    removeEvent: function (oElement, sEvent, fnHandler) 
+    {
+        oElement.removeEventListener ? oElement.removeEventListener(sEvent, fnHandler, false) : oElement.detachEvent("on" + sEvent, fnHandler)
+    }, 
+    getElementClient: function (){
+        var arr = [];
+        if (document.documentElement && document.documentElement.clientHeight && document.documentElement.clientWidth){
+            arr.push(document.documentElement.clientWidth);
+            arr.push(document.documentElement.clientHeight);
+            return arr;
+        }
+    },
+    getStyle: function (obj, attr)
+    {
+        return parseFloat(obj.currentStyle ? obj.currentStyle[attr] : getComputedStyle(obj, null)[attr])
+    },
+    startMove: function (obj, pos, onEnd)
+    {
+        clearInterval(obj.timer);
+        var _this = this;
+        obj.timer = setInterval(function ()
+        {
+            _this.doMove(obj, pos, onEnd)
+        }, 30) 
+    },
+    doMove: function (obj, pos, onEnd)
+    {
+        var iCurL = this.getStyle(obj, "left");
+        var iCurT = this.getStyle(obj, "top");
+        var iSpeedL = (pos.left - iCurL) / 5;
+        var iSpeedT = (pos.top - iCurT) / 5;
+        iSpeedL = iSpeedL > 0 ? Math.ceil(iSpeedL) : Math.floor(iSpeedL);
+        iSpeedT = iSpeedT > 0 ? Math.ceil(iSpeedT) : Math.floor(iSpeedT);
+        if (pos.left == iCurL && pos.top == iCurT)
+        {
+            clearInterval(obj.timer);
+            onEnd && onEnd()
+        }
+        else
+        {
+            obj.style.left = iCurL + iSpeedL + "px";
+            obj.style.top = iCurT + iSpeedT + "px"; 
+        }
+    }
+}
+function Draw (obj, num)
+{
+    this.obj = obj;  //lucky draw array
+    this.num = num;  //the max num data will be generated
+    this.data = []; //store the number to be show in the page,[0, num]
+    this.result = [];
+    this.show = 0;
+    this.btn = true;
+    this.timer = true;
+    this.h = 0;
+    this.uh = 0;
+    this.initialize();     
+}
+Draw.prototype = {
+    initialize: function ()
+    {
+        this.createArr ();
+        this.createElement ();
+        this.closeEvent ();
+        this.startDraw (); 
+    },
+    createElement: function ()
+    {
+        for(var j=0; j<this.obj.length; j++){  
+            var ul = document.createElement("ul");
+            for(var i=0; i<10; i++){
+                var li = document.createElement("li");
+                li.innerHTML = i;
+                ul.appendChild(li) 
+            }  
+            this.obj[j].appendChild(ul);
+            this.obj[j].btn = true;
+            AIR.$$("ul",this.obj[j])[0].innerHTML += AIR.$$("ul",this.obj[j])[0].innerHTML;        
+        } 
+        var UL = AIR.$$("ul",this.obj[0])[0];
+        this.h = AIR.getStyle(AIR.$$("li",UL)[0],"height");
+        this.uh = AIR.$$("li",UL).length * this.h
+    },
+    randomSort: function (a, b) {
+        return Math.random()>.5 ? -1 : 1;
+    },
+    createArr: function ()
+    {
+        for(var i=0; i<this.num+1; i++){
+            this.data.push(i);         
+        } 
+        this.data.sort(this.randomSort); 
+    },
+    closeEvent: function ()
+    {
+        document.onmousedown = document.onmousemove = document.oncontextmenu = function ()
+        {
+            return false; 
+        }     
+    },
+    startDraw: function ()
+    {
+        var _this = this;
+        document.onkeyup = function ( ev )
+        {
+            var ev = ev || window.event;
+            if(ev.keyCode == 13 || ev.keyCode == 32){
+                if(_this.btn && _this.timer){
+                    if(_this.obj[_this.obj.length-1].btn){
+                        _this.Play ();
+                        _this.btn = !_this.btn;
+                        _this.timer = !_this.timer; 
+                    }                     
+                }else{
+                    if(_this.obj[_this.obj.length-1].btn){
+                        _this.Stop ();
+                        _this.btn = !_this.btn;
+                        _this.timer = !_this.timer; 
+                    }
+                }
+                return false;
+            }else{
+                return false; 
+            }
+        }
+    },
+    Play: function ()
+    {
+        if(this.timer && this.btn){
+            var t = 0;
+            for(var i=0; i<this.obj.length; i++){
+                this.obj[i].btn = false;
+                this.playTimer (this.obj[i],t); 
+                t += 1500;
+            }
+        }else{
+            return false; 
+        }
+    },
+    playTimer: function (obj,t)
+    {
+        var _this = this;
+        setTimeout(function(){
+            _this.Move (obj);
+        },t)   
+    },
+    Del: function (a)
+    {
+        for(var i=0; i<this.data.length; i++){
+            if(a == this.data[i]){
+                this.data.splice(i,1); 
+            } 
+        } 
+    },
+    Stop: function ()
+    {
+        if(!this.timer && !this.btn){
+            var n = this.num + 1; //Total possible number
+            var r = this.data[Math.floor(Math.random() * (0-n) + n)];
+            this.show = r; //mark r as the lucky number 
+            this.Del (r); //remove the lucky number for next draw
+            r = r.toString().split("");
+            var c = this.obj.length - r.length; //add 0 in front of this array
+            if(r.length < this.obj.length){
+                for(var i=0; i<c; i++){
+                    r.unshift(0) 
+                } 
+            }
+            this.result = r;   //lucky number for this time
+            //document.title = r+" : "+this.data;    
+            var t = 0;
+            for(var i=0; i<this.obj.length; i++){ //traverse all boxes
+                this.obj[i].btn = false;
+                this.obj[i].index = i;
+                this.obj[i].num = this.result[this.obj[i].index];
+                this.stopTimer (this.obj[i],t); 
+                t += 1500;
+            }
+        }
+    },
+    stopTimer: function (obj,t)
+    {
+        var _this = this;
+        setTimeout(function(){
+            _this.showResult (obj);
+        },t)
+    },
+    showResult: function (obj)
+    {   
+        var _this = this;
+        this.timer = true;
+        this.btn = true;
+        obj.btn = false;
+        obj.vh = -obj.num * this.h;
+        obj.timeOut = setInterval(function(){
+            obj.speed -= 1;
+            if(obj.speed == 1){
+                clearInterval(obj.timeOut); 
+                clearInterval(obj.timer);
+                obj.timer = setInterval(function(){
+                    if(obj.ul.offsetTop >= obj.vh){
+                        clearInterval(obj.timer);
+                        AIR.startMove(obj.ul,{left:0,top:obj.vh},function(){
+                            obj.btn = true; 
+                            var set = true;
+                            for(var i=0; i<_this.obj.length; i++){ //check whether all box is stoped
+                                if(!_this.obj[i].btn){
+                                    set = false;     
+                                }
+                            }
+                            if(set){
+                                _this.Open(_this.show) 
+                            }
+                        });
+                    }
+                    obj.ul.style.top = obj.ul.offsetTop + obj.speed +"px";    
+                },30);
+            }
+       },100);     
+     
+    },
+    Open: function (num)
+    {
+        document.title += " "+ num;
+    },
+    Move: function (obj)
+    {
+        var _this = this;
+        var obj = obj;
+        obj.btn = false;
+        obj.timer = null;
+        obj.speed = 1;
+        obj.ul = AIR.$$("ul",obj)[0];
+        obj.ul.style.height = this.uh +"px";
+        obj.timer = setInterval(function(){
+            if(obj.ul.offsetTop > 0){
+                obj.ul.style.top = -(_this.uh/2) +"px";
+            }
+            obj.ul.style.top = obj.ul.offsetTop + obj.speed +"px";  
+        },30);
+        obj.timeOut = setInterval(function(){
+            obj.speed += 1;
+            if(obj.speed == 30){
+                clearInterval(obj.timeOut); //Fast the speed until reach 30
+                obj.btn = true; //the off-on to identify if every box is speed up
+            }
+        },300)  //Total need time 30 * 300ms = 9s
+    }
+    
+}
+var initialize = function ()
+{
+    new Draw ([AIR.$("box1"),AIR.$("box2"),AIR.$("box3")],192);
+    reSize ();
+}
+var reSize = function ()
+{
+    var v = AIR.getElementClient();
+    AIR.$$("img",AIR.$("back"))[0].width = v[0];
+    AIR.$$("img",AIR.$("back"))[0].height = v[1]; 
+}
+AIR.addEvent(window,"load",initialize);
+AIR.addEvent(window,"resize",reSize);
+</script>
+</head>
+<body>
+<div id="box">
+    <div id="box1"></div>
+    <div id="box2"></div>
+    <div id="box3"></div>
+    <div style="clear:both"></div>
+</div>
+<div id="back">
+    <img src="./images/monkey.png" />
+</div>
+<div id="showback">192</div>
+</body>
+</html>
